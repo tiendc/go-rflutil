@@ -132,6 +132,22 @@ v, err := StructToMap(reflect.ValueOf(s), false, func(name string, isExported bo
 })  // v == map[string]any{"i": 1, "s": "11", "i8": 0}
 ```
 
+#### ParseTag / ParseTagOf / ParseTagsOf
+
+```go
+type S struct {
+    I int    `mytag:"i,optional,k=v"`
+    S string `mytag:"s,optional,k1=v1,k2=v2,omitempty"`
+    U uint   `mytag:"-,optional"`
+}
+
+s := S{I: 1, S: "11", U: 10}
+sVal := reflect.ValueOf(s)
+iField, _ := sVal.Type().FieldByName("I")
+tag, err := ParseTag(&iField, "mytag", ",") // tag.Name == i
+                                            // tag.Attrs == map[string]string{"optional": "", "k", "v"}
+```
+
 ## Contributing
 
 - You are welcome to make pull requests for new functions and bug fixes.
