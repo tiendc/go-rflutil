@@ -83,36 +83,3 @@ func SliceAppend[T any](s reflect.Value, v T) ([]T, error) {
 	}
 	return reflect.Append(slice, val).Interface().([]T), nil // nolint: forcetypeassert
 }
-
-// SliceAs convert a slice or array to the expected slice type.
-// Type T must be assignable or convertible to the input slice's item type.
-func SliceAs[T any](s reflect.Value) ([]T, error) {
-	src := indirectValueTilRoot(s)
-	if !src.IsValid() || !isKindIn(src.Kind(), reflect.Slice, reflect.Array) {
-		return nil, fmt.Errorf("%w: require slice or array type (got %v)", ErrTypeInvalid, s.Type())
-	}
-
-	srcType := src.Type()
-	dstType := reflect.TypeOf([]T{})
-	if dstType == srcType {
-		return src.Interface().([]T), nil // nolint: forcetypeassert
-	}
-
-	dstItemType := dstType.Elem()
-	assignable := dstItemType.AssignableTo(srcType.Elem())
-	convertible := !assignable && dstItemType.ConvertibleTo(srcType.Elem())
-	if !assignable && !convertible {
-		return nil, fmt.Errorf("%w: unable to convert slice to '%v'", ErrTypeInvalid, dstType)
-	}
-
-	numItems := src.Len()
-	dst := reflect.MakeSlice(dstType, numItems, numItems)
-	for i := 0; i < numItems; i++ {
-		if assignable {
-			dst.Index(i).Set(src.Index(i))
-		} else {
-			dst.Index(i).Set(src.Index(i).Convert(dstItemType))
-		}
-	}
-	return dst.Interface().([]T), nil // nolint: forcetypeassert
-}
