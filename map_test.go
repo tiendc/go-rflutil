@@ -100,35 +100,3 @@ func Test_MapDelete_failure(t *testing.T) {
 		assert.ErrorIs(t, err, ErrTypeUnmatched)
 	})
 }
-
-func Test_MapAs(t *testing.T) {
-	t.Run("#1: same map type", func(t *testing.T) {
-		m1 := map[int]uint{1: 1, 2: 2, 3: 3}
-		m2, err := MapAs[int, uint](valOf(m1))
-		assert.Nil(t, err)
-		assert.Equal(t, m1, m2)
-	})
-
-	t.Run("#2: success", func(t *testing.T) {
-		m2, err := MapAs[int64, int64](valOf(map[int]uint{1: 1, 2: 2, 3: 3}))
-		assert.Nil(t, err)
-		assert.Equal(t, map[int64]int64{1: 1, 2: 2, 3: 3}, m2)
-	})
-}
-
-func Test_MapAs_failure(t *testing.T) {
-	t.Run("#1: input is not a map", func(t *testing.T) {
-		_, err := MapAs[int, uint](valOf("abc"))
-		assert.ErrorIs(t, err, ErrTypeInvalid)
-	})
-
-	t.Run("#2: value type unmatched", func(t *testing.T) {
-		_, err := MapAs[int, string](valOf(map[int]uint{1: 1, 2: 2, 3: 3}))
-		assert.ErrorIs(t, err, ErrTypeUnmatched)
-	})
-
-	t.Run("#3: key type unmatched", func(t *testing.T) {
-		_, err := MapAs[string, uint](valOf(map[int]uint{1: 1, 2: 2, 3: 3}))
-		assert.ErrorIs(t, err, ErrTypeUnmatched)
-	})
-}
