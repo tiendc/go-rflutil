@@ -42,14 +42,6 @@ slice2, err := SliceAppend(reflect.ValueOf(slice), 4)   // slice2 == []int{1, 2,
 slice2, err := SliceAppend(reflect.ValueOf(slice), "4") // err is ErrTypeUnmatched
 ```
 
-#### SliceAs
-
-```go
-slice := []int{1, 2, 3}
-slice2, err := SliceAs[int8](reflect.ValueOf(slice))   // slice2 == []int8{1, 2, 3}
-slice2, err := SliceAs[string](reflect.ValueOf(slice)) // err is ErrTypeUnmatched
-```
-
 ### Map functions
 
 #### MapGet
@@ -75,13 +67,6 @@ err := MapSet(reflect.ValueOf(aMap), 5, 555)   // err is ErrTypeUnmatched
 aMap := map[int]string{1: "11", 2: "22", 3: "33"}
 err := MapDelete(reflect.ValueOf(aMap), 1) // success
 err := MapDelete(reflect.ValueOf(aMap), 4) // success
-```
-
-#### MapAs
-
-```go
-aMap := map[int]string{1: "11", 2: "22", 3: "33"}
-map2, err := MapAs[int8,string](reflect.ValueOf(aMap), 1) // map2 == map[int8]string{1: "11", 2: "22", 3: "33"}
 ```
 
 ### Struct functions
