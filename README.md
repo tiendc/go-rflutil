@@ -13,8 +13,16 @@ go get github.com/tiendc/go-rflutil
 - [Slice functions](#slice-functions)
 - [Map functions](#map-functions)
 - [Struct functions](#struct-functions)
+- [Common functions](#common-functions)
 
 ### Slice functions
+
+#### SliceLen
+
+```go
+slice := []int{1, 2, 3}
+v, err := SliceLen(reflect.ValueOf(slice)) // v == 3
+```
 
 #### SliceGet
 
@@ -29,9 +37,9 @@ v, err := SliceGet[string](reflect.ValueOf(slice), 1)  // err is ErrTypeUnmatche
 
 ```go
 slice := []int{1, 2, 3}
-err := SliceSet[int](reflect.ValueOf(slice), 1, 22) // slice[1] == 22
-err := SliceSet[int](reflect.ValueOf(slice), 3, 44) // err is ErrIndexOutOfRange
-err := SliceSet(reflect.ValueOf(slice), 1, "22")    // err is ErrTypeUnmatched
+err := SliceSet(reflect.ValueOf(slice), 1, 22)    // slice[1] == 22
+err := SliceSet(reflect.ValueOf(slice), 3, 44)    // err is ErrIndexOutOfRange
+err := SliceSet(reflect.ValueOf(slice), 1, "22")  // err is ErrTypeUnmatched
 ```
 
 #### SliceAppend
@@ -40,6 +48,20 @@ err := SliceSet(reflect.ValueOf(slice), 1, "22")    // err is ErrTypeUnmatched
 slice := []int{1, 2, 3}
 slice2, err := SliceAppend(reflect.ValueOf(slice), 4)   // slice2 == []int{1, 2, 3, 4}
 slice2, err := SliceAppend(reflect.ValueOf(slice), "4") // err is ErrTypeUnmatched
+```
+
+#### SliceGetAll
+
+```go
+slice := []int{1, 2, 3}
+s, err := SliceGetAll(reflect.ValueOf(slice)) // returns []reflect.Value
+```
+
+#### SliceAs
+
+```go
+slice := []any{1, 2, 3}
+s, err := SliceAs[int64](reflect.ValueOf(slice)) // s == []int64{1,2,3}
 ```
 
 ### Map functions
@@ -131,6 +153,15 @@ sVal := reflect.ValueOf(s)
 iField, _ := sVal.Type().FieldByName("I")
 tag, err := ParseTag(&iField, "mytag", ",") // tag.Name == i
                                             // tag.Attrs == map[string]string{"optional": "", "k", "v"}
+```
+
+### Common functions
+
+#### ValueAs
+
+```go
+v, err := ValueAs[float32](reflect.ValueOf(97)) // v == float32(97)
+v, err := ValueAs[string](reflect.ValueOf(97))  // v == "a"
 ```
 
 ## Contributing
