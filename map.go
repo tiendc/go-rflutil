@@ -109,12 +109,12 @@ func MapEntries(m reflect.Value) ([]MapEntry, error) {
 		return nil, fmt.Errorf("%w: require map type (got %v)", ErrTypeInvalid, m.Type())
 	}
 
-	keys := val.MapKeys()
-	result := make([]MapEntry, 0, len(keys))
-	for i := range keys {
+	result := make([]MapEntry, 0, val.Len())
+	iter := val.MapRange()
+	for iter.Next() {
 		result = append(result, MapEntry{
-			Key:   keys[i],
-			Value: val.MapIndex(keys[i]),
+			Key:   iter.Key(),
+			Value: iter.Value(),
 		})
 	}
 	return result, nil
