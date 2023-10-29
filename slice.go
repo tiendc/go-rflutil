@@ -5,6 +5,15 @@ import (
 	"reflect"
 )
 
+// SliceLen get number of elements of a slice
+func SliceLen(s reflect.Value) (int, error) {
+	slice := indirectValueTilRoot(s)
+	if !slice.IsValid() || !isKindIn(slice.Kind(), reflect.Slice, reflect.Array) {
+		return 0, fmt.Errorf("%w: require slice or array type (got %v)", ErrTypeInvalid, s.Type())
+	}
+	return slice.Len(), nil
+}
+
 // SliceGet get value from a slice type at the given index
 func SliceGet[T any](s reflect.Value, i int) (T, error) {
 	var ret T
@@ -82,4 +91,38 @@ func SliceAppend[T any](s reflect.Value, v T) ([]T, error) {
 		return nil, fmt.Errorf("%w: item type is %v (expect %v)", ErrTypeUnmatched, itemType, val.Type())
 	}
 	return reflect.Append(slice, val).Interface().([]T), nil // nolint: forcetypeassert
+}
+
+// SliceGetAll get all elements of a slice
+func SliceGetAll(s reflect.Value) ([]reflect.Value, error) {
+	slice := indirectValueTilRoot(s)
+	if !slice.IsValid() || !isKindIn(slice.Kind(), reflect.Slice, reflect.Array) {
+		return nil, fmt.Errorf("%w: require slice or array type (got %v)", ErrTypeInvalid, s.Type())
+	}
+
+	length := slice.Len()
+	ret := make([]reflect.Value, 0, length)
+	for i := 0; i < length; i++ {
+		ret = append(ret, slice.Index(i))
+	}
+	return ret, nil
+}
+
+// SliceAs convert all elements of a slice to the target type
+func SliceAs[T any](s reflect.Value) ([]T, error) {
+	slice := indirectValueTilRoot(s)
+	if !slice.IsValid() || !isKindIn(slice.Kind(), reflect.Slice, reflect.Array) {
+		return nil, fmt.Errorf("%w: require slice or array type (got %v)", ErrTypeInvalid, s.Type())
+	}
+
+	length := slice.Len()
+	ret := make([]T, 0, length)
+	for i := 0; i < length; i++ {
+		v, err := ValueAs[T](slice.Index(i))
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, v)
+	}
+	return ret, nil
 }

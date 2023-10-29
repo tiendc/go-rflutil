@@ -1,10 +1,39 @@
 package rflutil
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func Test_SliceLen(t *testing.T) {
+	t.Run("#1: nil slice", func(t *testing.T) {
+		var s []int
+		v, err := SliceLen(valOf(s))
+		assert.Nil(t, err)
+		assert.Equal(t, 0, v)
+	})
+
+	t.Run("#2: empty slice", func(t *testing.T) {
+		v, err := SliceLen(valOf([]int{}))
+		assert.Nil(t, err)
+		assert.Equal(t, 0, v)
+	})
+
+	t.Run("#3: success", func(t *testing.T) {
+		v, err := SliceLen(valOf([]int{1, 2, 3}))
+		assert.Nil(t, err)
+		assert.Equal(t, 3, v)
+	})
+}
+
+func Test_SliceLen_failure(t *testing.T) {
+	t.Run("#1: input is not slice", func(t *testing.T) {
+		_, err := SliceLen(valOf("abc"))
+		assert.ErrorIs(t, err, ErrTypeInvalid)
+	})
+}
 
 func Test_SliceGet(t *testing.T) {
 	t.Run("#1: same type", func(t *testing.T) {
@@ -52,6 +81,20 @@ func Test_SliceGet_failure(t *testing.T) {
 	t.Run("#3: index out of range", func(t *testing.T) {
 		_, err := SliceGet[int](valOf([]int{1, 2, 3}), 3)
 		assert.ErrorIs(t, err, ErrIndexOutOfRange)
+	})
+}
+
+func Test_SliceGetAllAs_failure(t *testing.T) {
+	t.Run("#1: input is not slice", func(t *testing.T) {
+		s, err := SliceAs[string](valOf("abc"))
+		assert.Nil(t, s)
+		assert.ErrorIs(t, err, ErrTypeInvalid)
+	})
+
+	t.Run("#2: type not convertible", func(t *testing.T) {
+		s, err := SliceAs[string](valOf([]any{"abc", 123.123}))
+		assert.Nil(t, s)
+		assert.ErrorIs(t, err, ErrTypeUnmatched)
 	})
 }
 
@@ -140,6 +183,72 @@ func Test_SliceAppend_failure(t *testing.T) {
 
 	t.Run("#2: type not match", func(t *testing.T) {
 		_, err := SliceAppend(valOf([]int{1, 2, 3}), uint(1))
+		assert.ErrorIs(t, err, ErrTypeUnmatched)
+	})
+}
+
+func Test_SliceGetAll(t *testing.T) {
+	t.Run("#1: nil slice", func(t *testing.T) {
+		var s []int
+		v, err := SliceGetAll(valOf(s))
+		assert.Nil(t, err)
+		assert.Equal(t, []reflect.Value{}, v)
+	})
+
+	t.Run("#2: empty slice", func(t *testing.T) {
+		s, err := SliceGetAll(valOf([]int{}))
+		assert.Nil(t, err)
+		assert.Equal(t, []reflect.Value{}, s)
+	})
+
+	t.Run("#3: success", func(t *testing.T) {
+		s, err := SliceGetAll(valOf([]int{1, 2, 3}))
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(s))
+		assert.Equal(t, 1, s[0].Interface())
+		assert.Equal(t, 2, s[1].Interface())
+		assert.Equal(t, 3, s[2].Interface())
+	})
+}
+
+func Test_SliceGetAll_failure(t *testing.T) {
+	t.Run("#1: input is not slice", func(t *testing.T) {
+		s, err := SliceGetAll(valOf("abc"))
+		assert.Nil(t, s)
+		assert.ErrorIs(t, err, ErrTypeInvalid)
+	})
+}
+
+func Test_SliceAs(t *testing.T) {
+	t.Run("#1: input is not slice", func(t *testing.T) {
+		s, err := SliceAs[string](valOf([]any{"abc", "123", ""}))
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"abc", "123", ""}, s)
+	})
+
+	t.Run("#2: type not convertible", func(t *testing.T) {
+		s, err := SliceAs[string](valOf([]any{"abc", 97}))
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"abc", "a"}, s)
+	})
+}
+
+func Test_SliceAs_failure(t *testing.T) {
+	t.Run("#1: input is not slice", func(t *testing.T) {
+		s, err := SliceAs[string](valOf("abc"))
+		assert.Nil(t, s)
+		assert.ErrorIs(t, err, ErrTypeInvalid)
+	})
+
+	t.Run("#2: type not convertible", func(t *testing.T) {
+		s, err := SliceAs[string](valOf([]any{"abc", 123.123}))
+		assert.Nil(t, s)
+		assert.ErrorIs(t, err, ErrTypeUnmatched)
+	})
+
+	t.Run("#3: type not convertible", func(t *testing.T) {
+		s, err := SliceAs[string](valOf([]any{"abc", nil}))
+		assert.Nil(t, s)
 		assert.ErrorIs(t, err, ErrTypeUnmatched)
 	})
 }
