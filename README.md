@@ -66,6 +66,13 @@ s, err := SliceAs[int64](reflect.ValueOf(slice)) // s == []int64{1,2,3}
 
 ### Map functions
 
+#### MapLen
+
+```go
+aMap := map[int]string{1: "11", 2: "22", 3: "33"}
+v, err := MapLen(reflect.ValueOf(aMap), 1) // v == 3
+```
+
 #### MapGet
 
 ```go
@@ -89,6 +96,20 @@ err := MapSet(reflect.ValueOf(aMap), 5, 555)   // err is ErrTypeUnmatched
 aMap := map[int]string{1: "11", 2: "22", 3: "33"}
 err := MapDelete(reflect.ValueOf(aMap), 1) // success
 err := MapDelete(reflect.ValueOf(aMap), 4) // success
+```
+
+#### MapKeys
+
+```go
+aMap := map[int]string{1: "11", 2: "22", 3: "33"}
+keys, err := MapKeys(reflect.ValueOf(aMap)) // returns a slice []reflect.Value of keys
+```
+
+#### MapEntries
+
+```go
+aMap := map[int]string{1: "11", 2: "22", 3: "33"}
+entries, err := MapEntries(reflect.ValueOf(aMap)) // returns a slice []MapEntry of entries
 ```
 
 ### Struct functions

@@ -5,6 +5,20 @@ import (
 	"reflect"
 )
 
+type MapEntry struct {
+	Key   reflect.Value
+	Value reflect.Value
+}
+
+// MapLen get number of entries in a map
+func MapLen(m reflect.Value) (int, error) {
+	val := indirectValueTilRoot(m)
+	if !val.IsValid() || val.Kind() != reflect.Map {
+		return 0, fmt.Errorf("%w: require map type (got %v)", ErrTypeInvalid, m.Type())
+	}
+	return val.Len(), nil
+}
+
 // MapGet get value from a map by key
 func MapGet[V any, K comparable](m reflect.Value, k K) (V, error) {
 	var ret V
@@ -77,4 +91,31 @@ func MapDelete[K comparable](m reflect.Value, k K) error {
 	// Set zero value means delete the key from the map
 	val.SetMapIndex(keyVal, reflect.Value{})
 	return nil
+}
+
+// MapKeys get all keys of a map
+func MapKeys(m reflect.Value) ([]reflect.Value, error) {
+	val := indirectValueTilRoot(m)
+	if !val.IsValid() || val.Kind() != reflect.Map {
+		return nil, fmt.Errorf("%w: require map type (got %v)", ErrTypeInvalid, m.Type())
+	}
+	return val.MapKeys(), nil
+}
+
+// MapEntries get all entries of a map
+func MapEntries(m reflect.Value) ([]MapEntry, error) {
+	val := indirectValueTilRoot(m)
+	if !val.IsValid() || val.Kind() != reflect.Map {
+		return nil, fmt.Errorf("%w: require map type (got %v)", ErrTypeInvalid, m.Type())
+	}
+
+	keys := val.MapKeys()
+	result := make([]MapEntry, 0, len(keys))
+	for i := range keys {
+		result = append(result, MapEntry{
+			Key:   keys[i],
+			Value: val.MapIndex(keys[i]),
+		})
+	}
+	return result, nil
 }
