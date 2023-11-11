@@ -92,10 +92,24 @@ func structGetField(v reflect.Value, name string, caseSensitive bool) *reflect.S
 
 // StructToMap convert a struct to a map
 // Pass the keyFunc as nil to default to use field name and ignore unexported fields.
-// nolint: gocognit
 func StructToMap(
 	v reflect.Value,
 	parseJSONTag bool,
+	keyFunc func(name string, isExported bool) string,
+) (map[string]any, error) {
+	customTag := ""
+	if parseJSONTag {
+		customTag = "json"
+	}
+	return StructToMapEx(v, customTag, keyFunc)
+}
+
+// StructToMapEx convert a struct to a map
+// Pass the keyFunc as nil to default to use field name and ignore unexported fields.
+// nolint: gocognit
+func StructToMapEx(
+	v reflect.Value,
+	customTag string,
 	keyFunc func(name string, isExported bool) string,
 ) (map[string]any, error) {
 	val := indirectValueTilRoot(v)
@@ -103,8 +117,8 @@ func StructToMap(
 		return nil, fmt.Errorf("%w: require struct type (got %v)", ErrTypeInvalid, v.Type())
 	}
 
-	parseJSONName := func(sf *reflect.StructField, v *reflect.Value) (string, error) {
-		tag, err := ParseTag(sf, "json", ",")
+	parseCustomTag := func(sf *reflect.StructField, v *reflect.Value) (string, error) {
+		tag, err := ParseTag(sf, customTag, ",")
 		if err != nil {
 			if errors.Is(err, ErrNotFound) {
 				return "", nil
@@ -128,15 +142,15 @@ func StructToMap(
 		structField := typ.Field(i)
 
 		name := structField.Name
-		if parseJSONTag {
-			jsonName, err := parseJSONName(&structField, &field)
+		if customTag != "" {
+			customName, err := parseCustomTag(&structField, &field)
 			if err != nil {
 				return nil, err
 			}
-			if jsonName == "" {
+			if customName == "" {
 				continue
 			}
-			name = jsonName
+			name = customName
 		}
 
 		if keyFunc == nil {
