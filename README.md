@@ -142,7 +142,7 @@ err := StructSetField[string](reflect.ValueOf(&s), "s", "111", false) // success
 err := StructSetField[string](reflect.ValueOf(&s), "s", "111", true)  // err is ErrNotFound
 ```
 
-#### StructToMap
+#### StructToMap / StructToMapEx
 
 ```go
 type S struct {
@@ -152,8 +152,13 @@ type S struct {
 }
 s := S{I: 1, S: "11"}
 v, err := StructToMap(reflect.ValueOf(s), false, nil) // v == map[string]any{"I": 1, "S": "11"}
+
 // Pass arg parseJSONTag with "true"
 v, err := StructToMap(reflect.ValueOf(s), true, nil)  // v == map[string]any{"ii": 1, "ss": "11"}
+
+// Use StructToMapEx in case you want to parse custom tag
+v, err := StructToMapEx(reflect.ValueOf(s), "json", nil)  // v == map[string]any{"ii": 1, "ss": "11"}
+
 // Pass arg keyFunc to extract unexported fields
 v, err := StructToMap(reflect.ValueOf(s), false, func(name string, isExported bool) string {
 	return strings.ToLower(name)
