@@ -90,6 +90,56 @@ func structGetField(v reflect.Value, name string, caseSensitive bool) *reflect.S
 	return &f
 }
 
+func StructListFields(
+	v reflect.Value,
+	listUnexportedFields bool,
+	customTag string,
+) ([]string, error) {
+	val := indirectValueTilRoot(v)
+	if !val.IsValid() || val.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("%w: require struct type (got %v)", ErrTypeInvalid, v.Type())
+	}
+
+	parseCustomTag := func(sf *reflect.StructField) (string, error) {
+		tag, err := ParseTag(sf, customTag, ",")
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return "", nil
+			}
+			return "", err
+		}
+		if tag.Ignored || tag.Name == "" {
+			return "", nil
+		}
+		return tag.Name, nil
+	}
+
+	typ := val.Type()
+	numFields := typ.NumField()
+	result := make([]string, 0, numFields)
+	for i := 0; i < numFields; i++ {
+		structField := typ.Field(i)
+		if !listUnexportedFields && !structField.IsExported() {
+			continue
+		}
+
+		name := structField.Name
+		if customTag != "" {
+			customName, err := parseCustomTag(&structField)
+			if err != nil {
+				return nil, err
+			}
+			if customName == "" {
+				continue
+			}
+			name = customName
+		}
+
+		result = append(result, name)
+	}
+	return result, nil
+}
+
 // StructToMap convert a struct to a map
 // Pass the keyFunc as nil to default to use field name and ignore unexported fields.
 func StructToMap(

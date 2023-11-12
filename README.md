@@ -142,6 +142,18 @@ err := StructSetField[string](reflect.ValueOf(&s), "s", "111", false) // success
 err := StructSetField[string](reflect.ValueOf(&s), "s", "111", true)  // err is ErrNotFound
 ```
 
+#### StructListFields
+
+```go
+type S struct {
+    I int    `mytag:"ii"`
+    S string `mytag:"ss"`
+}
+s := S{I: 1, S: "11"}
+fields, err := StructListFields(reflect.ValueOf(&s), false, "")      // fields == []string{"I", "S"}
+fields, err := StructListFields(reflect.ValueOf(&s), false, "mytag") // fields == []string{"ii", "ss"}
+```
+
 #### StructToMap / StructToMapEx
 
 ```go

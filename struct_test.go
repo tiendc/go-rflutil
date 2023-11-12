@@ -53,22 +53,22 @@ func Test_StructGetField_failure(t *testing.T) {
 		u uint
 	}
 
-	t.Run("#3: field not found", func(t *testing.T) {
+	t.Run("#1: field not found", func(t *testing.T) {
 		_, err := StructGetField[int](valOf(SS{I: 1, u: 2}), "II", true)
 		assert.ErrorIs(t, err, ErrNotFound)
 	})
 
-	t.Run("#4: input not struct", func(t *testing.T) {
+	t.Run("#2: input not struct", func(t *testing.T) {
 		_, err := StructGetField[int](valOf("abc123"), "I", true)
 		assert.ErrorIs(t, err, ErrTypeInvalid)
 	})
 
-	t.Run("#5: output type unmatched", func(t *testing.T) {
+	t.Run("#3: output type unmatched", func(t *testing.T) {
 		_, err := StructGetField[uint](valOf(&SS{I: 1, u: 2}), "I", true)
 		assert.ErrorIs(t, err, ErrTypeUnmatched)
 	})
 
-	t.Run("#6: 2 fields have same case-insensitive names", func(t *testing.T) {
+	t.Run("#4: 2 fields have same case-insensitive names", func(t *testing.T) {
 		// nolint: unused
 		type SS2 struct {
 			I int
@@ -143,6 +143,44 @@ func Test_StructSetField_failure(t *testing.T) {
 		s := SS{I: 1, u: 2}
 		err := StructSetField(valOf(&s), "I", int32(11), true)
 		assert.ErrorIs(t, err, ErrTypeUnmatched)
+	})
+}
+
+func Test_StructListFields(t *testing.T) {
+	type SS struct {
+		I int  `mytag:"ii"`
+		u uint `mytag:"uu"`
+	}
+
+	t.Run("#1: success", func(t *testing.T) {
+		v, err := StructListFields(valOf(&SS{I: 1, u: 2}), false, "")
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"I"}, v)
+	})
+
+	t.Run("#2: success - unexported field", func(t *testing.T) {
+		v, err := StructListFields(valOf(&SS{I: 1, u: 2}), true, "")
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"I", "u"}, v)
+	})
+
+	t.Run("#3: success - parse custom tag", func(t *testing.T) {
+		v, err := StructListFields(valOf(&SS{I: 1, u: 2}), false, "mytag")
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"ii"}, v)
+	})
+
+	t.Run("#4: success - parse custom tag and unexported field", func(t *testing.T) {
+		v, err := StructListFields(valOf(&SS{I: 1, u: 2}), true, "mytag")
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"ii", "uu"}, v)
+	})
+}
+
+func Test_StructListFields_failure(t *testing.T) {
+	t.Run("#1: input not struct", func(t *testing.T) {
+		_, err := StructListFields(valOf("abc123"), false, "")
+		assert.ErrorIs(t, err, ErrTypeInvalid)
 	})
 }
 
