@@ -27,7 +27,7 @@ func StructGetField[T any](v reflect.Value, name string, caseSensitive bool) (T,
 			return zeroT, fmt.Errorf("%w: accessing unexported field requires it to be addressable",
 				ErrValueUnaddressable)
 		}
-		field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+		field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem() //nolint:gosec
 	}
 
 	t, ok := field.Interface().(T)
@@ -55,7 +55,7 @@ func StructSetField[T any](v reflect.Value, name string, value T, caseSensitive 
 			return fmt.Errorf("%w: accessing unexported field requires it to be addressable",
 				ErrValueUnaddressable)
 		}
-		field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+		field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem() //nolint:gosec
 	}
 	if !field.CanSet() {
 		return ErrValueUnsettable
@@ -219,7 +219,7 @@ func StructToMapEx(
 				return nil, fmt.Errorf("%w: accessing unexported field requires it to be addressable",
 					ErrValueUnaddressable)
 			}
-			field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+			field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem() //nolint:gosec
 		}
 		result[name] = field.Interface()
 	}

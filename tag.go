@@ -51,7 +51,7 @@ func ParseTag(field *reflect.StructField, tagName, delim string) (*Tag, error) {
 	tag.Ignored = tag.Name == "-"
 
 	for _, tagOpt := range tags[1:] {
-		kv := strings.SplitN(tagOpt, "=", 2) // nolint: gomnd
+		kv := strings.SplitN(tagOpt, "=", 2) //nolint:mnd
 		if len(kv) == 1 {
 			tag.Attrs[kv[0]] = ""
 		} else {
