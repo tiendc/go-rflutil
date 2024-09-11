@@ -206,10 +206,6 @@ v, err := ValueAs[string](reflect.ValueOf(97))  // v == "a"
 
 - You are welcome to make pull requests for new functions and bug fixes.
 
-## Authors
-
-- Dao Cong Tien ([tiendc](https://github.com/tiendc))
-
 ## License
 
 - [MIT License](LICENSE)
