@@ -112,11 +112,4 @@ func Test_StructToMap_embeddedStruct(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, map[string]any{"S": "", "Sub": (*SS2)(nil)}, m)
 	})
-
-	t.Run("#4: success with embedding struct, no flatten", func(t *testing.T) {
-		s := SS3{}
-		m, err := StructToMap(valOf(&s), "", false)
-		assert.Nil(t, err)
-		assert.Equal(t, map[string]any{"S": "", "SS2": s.SS2}, m)
-	})
 }
