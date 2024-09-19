@@ -2,7 +2,6 @@ package rflutil
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,6 +77,11 @@ func Test_StructGetField_failure(t *testing.T) {
 		_, err := StructGetField[int](valOf(SS2{I: 1, u: 2}), "i", false)
 		assert.ErrorIs(t, err, ErrNotFound)
 	})
+
+	t.Run("#5: unexported but can't get address of field", func(t *testing.T) {
+		_, err := StructGetField[uint](valOf(SS{I: 1, u: 2}), "u", true)
+		assert.ErrorIs(t, err, ErrValueUnaddressable)
+	})
 }
 
 func Test_StructSetField(t *testing.T) {
@@ -144,6 +148,12 @@ func Test_StructSetField_failure(t *testing.T) {
 		err := StructSetField(valOf(&s), "I", int32(11), true)
 		assert.ErrorIs(t, err, ErrTypeUnmatched)
 	})
+
+	t.Run("#5: unexported but can't get address of field", func(t *testing.T) {
+		s := SS{I: 1, u: 2}
+		err := StructSetField(valOf(s), "u", uint(11), true)
+		assert.ErrorIs(t, err, ErrValueUnaddressable)
+	})
 }
 
 func Test_StructListFields(t *testing.T) {
@@ -153,108 +163,53 @@ func Test_StructListFields(t *testing.T) {
 	}
 
 	t.Run("#1: success", func(t *testing.T) {
-		v, err := StructListFields(valOf(&SS{I: 1, u: 2}), false, "")
+		v, err := StructListFields(valOf(&SS{}), false)
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"I"}, v)
 	})
 
-	t.Run("#2: success - unexported field", func(t *testing.T) {
-		v, err := StructListFields(valOf(&SS{I: 1, u: 2}), true, "")
+	t.Run("#2: success - flatten embedded struct", func(t *testing.T) {
+		type SS2 struct {
+			SS `mytag:"ss"`
+			I  int `mytag:"ii"`
+		}
+		v, err := StructListFields(valOf(&SS2{}), true)
 		assert.Nil(t, err)
-		assert.Equal(t, []string{"I", "u"}, v)
+		assert.Equal(t, []string{"I"}, v)
 	})
 
-	t.Run("#3: success - parse custom tag", func(t *testing.T) {
-		v, err := StructListFields(valOf(&SS{I: 1, u: 2}), false, "mytag")
+	t.Run("#3: success - multi-level embedded structs", func(t *testing.T) {
+		type SS2 struct {
+			SS `mytag:"ss"`
+			I  int `mytag:"ii"`
+		}
+		type SS3 struct {
+			I2  int `mytag:"ii2"`
+			SS2 `mytag:"ss2"`
+		}
+		v, err := StructListFields(valOf(SS3{}), true)
 		assert.Nil(t, err)
-		assert.Equal(t, []string{"ii"}, v)
+		assert.Equal(t, []string{"I2", "I"}, v)
 	})
 
-	t.Run("#4: success - parse custom tag and unexported field", func(t *testing.T) {
-		v, err := StructListFields(valOf(&SS{I: 1, u: 2}), true, "mytag")
+	t.Run("#4: success - embedded structs, no flatten embedded fields", func(t *testing.T) {
+		type SS2 struct {
+			SS `mytag:"ss"`
+			I  int `mytag:"ii"`
+		}
+		type SS3 struct {
+			I2  int `mytag:"ii2"`
+			SS2 `mytag:"ss2"`
+		}
+		v, err := StructListFields(valOf(SS3{}), false)
 		assert.Nil(t, err)
-		assert.Equal(t, []string{"ii", "uu"}, v)
+		assert.Equal(t, []string{"I2", "SS2"}, v)
 	})
 }
 
 func Test_StructListFields_failure(t *testing.T) {
 	t.Run("#1: input not struct", func(t *testing.T) {
-		_, err := StructListFields(valOf("abc123"), false, "")
-		assert.ErrorIs(t, err, ErrTypeInvalid)
-	})
-}
-
-func Test_StructToMap(t *testing.T) {
-	type SS struct {
-		I int    `json:"i"`
-		S string `json:"s,omitempty"`
-		U *uint  `json:"-"`
-		b bool
-	}
-
-	t.Run("#1: success", func(t *testing.T) {
-		s := SS{I: 1, S: "2", U: ptrOf(uint(3)), b: true}
-		m, err := StructToMap(valOf(&s), false, nil)
-		assert.Nil(t, err)
-		assert.Equal(t, map[string]any{"I": 1, "S": "2", "U": ptrOf(uint(3))}, m)
-	})
-
-	t.Run("#2: success with keyFunc", func(t *testing.T) {
-		s := SS{I: 1, S: "2", U: ptrOf(uint(3)), b: true}
-		m, err := StructToMap(valOf(&s), false, func(name string, isExported bool) string {
-			return strings.ToLower(name)
-		})
-		assert.Nil(t, err)
-		assert.Equal(t, map[string]any{"i": 1, "s": "2", "u": ptrOf(uint(3)), "b": true}, m)
-	})
-
-	t.Run("#3: keyFunc returns empty str", func(t *testing.T) {
-		s := SS{I: 1, S: "2", U: ptrOf(uint(3)), b: true}
-		m, err := StructToMap(valOf(&s), false, func(name string, isExported bool) string {
-			if name == "I" {
-				return ""
-			}
-			return name
-		})
-		assert.Nil(t, err)
-		assert.Equal(t, map[string]any{"S": "2", "U": ptrOf(uint(3)), "b": true}, m)
-	})
-
-	t.Run("#4: success with parsing json", func(t *testing.T) {
-		s := SS{I: 1, S: "2", U: ptrOf(uint(3)), b: true}
-		m, err := StructToMap(valOf(&s), true, nil)
-		assert.Nil(t, err)
-		assert.Equal(t, map[string]any{"i": 1, "s": "2"}, m)
-	})
-
-	t.Run("#5: success with parsing json with omitempty", func(t *testing.T) {
-		s := SS{I: 1, S: "", U: ptrOf(uint(3)), b: true}
-		m, err := StructToMap(valOf(&s), true, func(name string, isExported bool) string {
-			return name
-		})
-		assert.Nil(t, err)
-		assert.Equal(t, map[string]any{"i": 1}, m)
-	})
-}
-
-func Test_StructToMap_failure(t *testing.T) {
-	type SS struct {
-		I int
-		S string
-		U *uint
-		b bool
-	}
-
-	t.Run("#1: unaddressable error", func(t *testing.T) {
-		s := SS{I: 1, S: "2", U: ptrOf(uint(3)), b: true}
-		_, err := StructToMap(valOf(s), false, func(name string, isExported bool) string {
-			return strings.ToLower(name)
-		})
-		assert.ErrorIs(t, err, ErrValueUnaddressable)
-	})
-
-	t.Run("#2: input not struct", func(t *testing.T) {
-		_, err := StructToMap(valOf("abc123"), false, nil)
+		_, err := StructListFields(valOf("abc123"), false)
 		assert.ErrorIs(t, err, ErrTypeInvalid)
 	})
 }

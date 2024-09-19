@@ -1,15 +1,14 @@
 package rflutil
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 	"unsafe"
 )
 
-// StructGetField get struct field value by field name as T type
-// Input should be a struct, a ptr to a struct, or an interface containing a struct
+// StructGetField get struct field value by field name as T type.
+// Input should be a struct, a ptr to a struct, or an interface containing a struct.
 func StructGetField[T any](v reflect.Value, name string, caseSensitive bool) (T, error) {
 	var zeroT T
 	val := indirectValueTilRoot(v)
@@ -38,7 +37,7 @@ func StructGetField[T any](v reflect.Value, name string, caseSensitive bool) (T,
 	return t, nil
 }
 
-// StructSetField set struct field value by field name as T type
+// StructSetField set struct field value by field name as T type.
 func StructSetField[T any](v reflect.Value, name string, value T, caseSensitive bool) error {
 	val := indirectValueTilRoot(v)
 	if !val.IsValid() || val.Kind() != reflect.Struct {
@@ -90,138 +89,49 @@ func structGetField(v reflect.Value, name string, caseSensitive bool) *reflect.S
 	return &f
 }
 
+// StructListFields lists all fields of a struct with flattening embedded structs option.
 func StructListFields(
 	v reflect.Value,
-	listUnexportedFields bool,
-	customTag string,
+	flattenEmbeddedStructs bool,
 ) ([]string, error) {
-	val := indirectValueTilRoot(v)
-	if !val.IsValid() || val.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("%w: require struct type (got %v)", ErrTypeInvalid, v.Type())
+	return structListFields(v.Type(), flattenEmbeddedStructs)
+}
+
+// structListFields lists all fields of a struct with flattening embedded structs option.
+func structListFields(
+	t reflect.Type,
+	flattenEmbeddedStructs bool,
+) ([]string, error) {
+	typ := indirectTypeTilRoot(t)
+	if typ.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("%w: struct or struct pointer required, got '%v'", ErrTypeInvalid, t)
 	}
 
-	parseCustomTag := func(sf *reflect.StructField) (string, error) {
-		tag, err := ParseTag(sf, customTag, ",")
-		if err != nil {
-			if errors.Is(err, ErrNotFound) {
-				return "", nil
-			}
-			return "", err
-		}
-		if tag.Ignored || tag.Name == "" {
-			return "", nil
-		}
-		return tag.Name, nil
-	}
-
-	typ := val.Type()
 	numFields := typ.NumField()
 	result := make([]string, 0, numFields)
 	for i := 0; i < numFields; i++ {
 		structField := typ.Field(i)
-		if !listUnexportedFields && !structField.IsExported() {
-			continue
-		}
-
-		name := structField.Name
-		if customTag != "" {
-			customName, err := parseCustomTag(&structField)
-			if err != nil {
-				return nil, err
-			}
-			if customName == "" {
+		//nolint:nestif
+		if structField.Anonymous && flattenEmbeddedStructs {
+			fieldType := structField.Type
+			fieldRootType := indirectTypeTilRoot(fieldType)
+			if fieldRootType.Kind() == reflect.Struct {
+				embeddedFields, err := structListFields(fieldRootType, flattenEmbeddedStructs)
+				if err != nil {
+					return nil, err
+				}
+				for _, f := range embeddedFields {
+					if sliceIndexOf(result, f) == -1 {
+						result = append(result, f)
+					}
+				}
 				continue
 			}
-			name = customName
 		}
-
-		result = append(result, name)
-	}
-	return result, nil
-}
-
-// StructToMap convert a struct to a map
-// Pass the keyFunc as nil to default to use field name and ignore unexported fields.
-func StructToMap(
-	v reflect.Value,
-	parseJSONTag bool,
-	keyFunc func(name string, isExported bool) string,
-) (map[string]any, error) {
-	customTag := ""
-	if parseJSONTag {
-		customTag = "json"
-	}
-	return StructToMapEx(v, customTag, keyFunc)
-}
-
-// StructToMapEx convert a struct to a map
-// Pass the keyFunc as nil to default to use field name and ignore unexported fields.
-// nolint: gocognit
-func StructToMapEx(
-	v reflect.Value,
-	customTag string,
-	keyFunc func(name string, isExported bool) string,
-) (map[string]any, error) {
-	val := indirectValueTilRoot(v)
-	if !val.IsValid() || val.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("%w: require struct type (got %v)", ErrTypeInvalid, v.Type())
-	}
-
-	parseCustomTag := func(sf *reflect.StructField, v *reflect.Value) (string, error) {
-		tag, err := ParseTag(sf, customTag, ",")
-		if err != nil {
-			if errors.Is(err, ErrNotFound) {
-				return "", nil
-			}
-			return "", err
+		if structField.IsExported() {
+			result = sliceRemove(result, structField.Name)
+			result = append(result, structField.Name)
 		}
-		if tag.Ignored || tag.Name == "" {
-			return "", nil
-		}
-		if tag.HasAttr("omitempty") && (!v.IsValid() || v.IsZero()) {
-			return "", nil
-		}
-		return tag.Name, nil
-	}
-
-	typ := val.Type()
-	numFields := typ.NumField()
-	result := make(map[string]any, numFields)
-	for i := 0; i < numFields; i++ {
-		field := val.Field(i)
-		structField := typ.Field(i)
-
-		name := structField.Name
-		if customTag != "" {
-			customName, err := parseCustomTag(&structField, &field)
-			if err != nil {
-				return nil, err
-			}
-			if customName == "" {
-				continue
-			}
-			name = customName
-		}
-
-		if keyFunc == nil {
-			if structField.IsExported() {
-				result[name] = field.Interface()
-			}
-			continue
-		}
-
-		name = keyFunc(name, structField.IsExported())
-		if name == "" {
-			continue
-		}
-		if !structField.IsExported() {
-			if !field.CanAddr() {
-				return nil, fmt.Errorf("%w: accessing unexported field requires it to be addressable",
-					ErrValueUnaddressable)
-			}
-			field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem() //nolint:gosec
-		}
-		result[name] = field.Interface()
 	}
 	return result, nil
 }
