@@ -117,11 +117,11 @@ entries, err := MapEntries(reflect.ValueOf(aMap)) // returns a slice []MapEntry 
 #### StructGetField
 
 ```go
-type S struct {
+type Struct struct {
     I int
     S string
 }
-s := S{I: 1, S: "11"}
+s := Struct{I: 1, S: "11"}
 v, err := StructGetField[int](reflect.ValueOf(s), "I", true)     // v == 1
 v, err := StructGetField[string](reflect.ValueOf(s), "S", true)  // v == "11"
 v, err := StructGetField[string](reflect.ValueOf(s), "s", false) // v == "11"
@@ -131,11 +131,11 @@ v, err := StructGetField[string](reflect.ValueOf(s), "s", true)  // err is ErrNo
 #### StructSetField
 
 ```go
-type S struct {
+type Struct struct {
     I int
     S string
 }
-s := S{I: 1, S: "11"}
+s := Struct{I: 1, S: "11"}
 err := StructSetField[int](reflect.ValueOf(&s), "I", 11, true)        // success
 err := StructSetField[string](reflect.ValueOf(&s), "S", "111", true)  // success
 err := StructSetField[string](reflect.ValueOf(&s), "s", "111", false) // success
@@ -145,36 +145,43 @@ err := StructSetField[string](reflect.ValueOf(&s), "s", "111", true)  // err is 
 #### StructListFields
 
 ```go
-type S struct {
-    I int    `mytag:"ii"`
-    S string `mytag:"ss"`
+type Base struct {
+    I  int
+    S2 string
 }
-s := S{I: 1, S: "11"}
-fields, err := StructListFields(reflect.ValueOf(&s), false, "")      // fields == []string{"I", "S"}
-fields, err := StructListFields(reflect.ValueOf(&s), false, "mytag") // fields == []string{"ii", "ss"}
+type Struct struct {
+    Base
+    I int
+    S string
+}
+s := Struct{}
+fields, err := StructListFields(reflect.ValueOf(&s), false) // returns []string{"Base", "I", "S"}
+fields, err := StructListFields(reflect.ValueOf(&s), true)  // returns []string{"S2", "I", "S"}
 ```
 
-#### StructToMap / StructToMapEx
+#### StructToMap
 
 ```go
-type S struct {
-    I  int    `json:"ii"`
-    S  string `json:"ss"`
-    i8 int8
+type Base struct {
+    I  int     `json:"i"`
+    S2 string  `json:"s2"`
 }
-s := S{I: 1, S: "11"}
-v, err := StructToMap(reflect.ValueOf(s), false, nil) // v == map[string]any{"I": 1, "S": "11"}
+type Struct struct {
+    Base
+    I int    `json:"i"`
+    S string `json:"s"`
+}
 
-// Pass arg parseJSONTag with "true"
-v, err := StructToMap(reflect.ValueOf(s), true, nil)  // v == map[string]any{"ii": 1, "ss": "11"}
+s := Struct{I: 1, S: "S", Base: Base{I: 2, S2: "S2"}}
 
-// Use StructToMapEx in case you want to parse custom tag
-v, err := StructToMapEx(reflect.ValueOf(s), "json", nil)  // v == map[string]any{"ii": 1, "ss": "11"}
+// Converts without flattening the embedded struct
+m, err := StructToMap(reflect.ValueOf(&s), "", false)    // m == map[string]any{"Base": Base{I: 2, S2: "S2"}, "I": 1, "S": "S"}
 
-// Pass arg keyFunc to extract unexported fields
-v, err := StructToMap(reflect.ValueOf(s), false, func(name string, isExported bool) string {
-	return strings.ToLower(name)
-})  // v == map[string]any{"i": 1, "s": "11", "i8": 0}
+// Converts with flattening the embedded struct
+m, err := StructToMap(reflect.ValueOf(&s), "", true)     // m == map[string]any{"S2": "S2", "I": 1, "S": "S"}
+
+// Converts with parsing json tag
+m, err := StructToMap(reflect.ValueOf(&s), "json", true) // m == map[string]any{"s2": "S2", "i": 1, "s": "S"}
 ```
 
 #### ParseTag / ParseTagOf / ParseTagsOf
